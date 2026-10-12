@@ -1,0 +1,42 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <RootNamespace>GrammarApp</RootNamespace>
+    <!-- Tests live in their own project under tests/; keep them out of the app. -->
+    <DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
+
+    <!-- Portable: `dotnet publish -c Release -o publish` => a folder that runs anywhere, offline, no installs.
+         Not single-file: llama.cpp's native DLLs must sit on disk next to the exe. -->
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+
+    <ModelUrl>https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf</ModelUrl>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="GrammarApp.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LLamaSharp" Version="0.27.0" />
+    <PackageReference Include="LLamaSharp.Backend.Cpu" Version="0.27.0" />
+    <!-- Vulkan = any GPU (NVIDIA/AMD/Intel) through the normal display driver; no CUDA install. Falls back to the CPU build. -->
+    <PackageReference Include="LLamaSharp.Backend.Vulkan" Version="0.27.0" />
+  </ItemGroup>
+
+  <!-- The model is fetched once at build time (2.5 GB); the built app never touches the network. -->
+  <Target Name="FetchModel" BeforeTargets="BeforeBuild" Condition="!Exists('models\model.gguf')">
+    <DownloadFile SourceUrl="$(ModelUrl)" DestinationFolder="models" DestinationFileName="model.gguf" />
+  </Target>
+
+  <ItemGroup>
+    <None Include="models\model.gguf" Link="model.gguf" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

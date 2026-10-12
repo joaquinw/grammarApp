@@ -1,0 +1,106 @@
+<Window x:Class="GrammarApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GrammarApp" Width="500" SizeToContent="Height"
+        WindowStyle="None" AllowsTransparency="True" Background="Transparent"
+        ResizeMode="NoResize" Topmost="True" ShowInTaskbar="False"
+        FontFamily="Segoe UI Variable Text, Segoe UI" FontSize="13"
+        UseLayoutRounding="True" TextOptions.TextFormattingMode="Display">
+
+    <Window.Resources>
+        <Style x:Key="Btn" TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource Fg}"/>
+            <Setter Property="Background" Value="{DynamicResource Card}"/>
+            <Setter Property="Padding" Value="14,7"/>
+            <Setter Property="Margin" Value="6,0,0,0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="7"
+                                Padding="{TemplateBinding Padding}" BorderThickness="1" BorderBrush="Transparent">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Opacity" Value="0.85"/></Trigger>
+                            <Trigger Property="IsPressed" Value="True"><Setter TargetName="b" Property="Opacity" Value="0.7"/></Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True"><Setter TargetName="b" Property="BorderBrush" Value="{DynamicResource Accent}"/></Trigger>
+                            <Trigger Property="IsEnabled" Value="False"><Setter Property="Opacity" Value="0.4"/></Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Primary" TargetType="Button" BasedOn="{StaticResource Btn}">
+            <Setter Property="Background" Value="{DynamicResource Accent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Bg}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="Chip" TargetType="Button" BasedOn="{StaticResource Btn}">
+            <Setter Property="Padding" Value="9,3"/>
+            <Setter Property="Margin" Value="0,0,6,4"/>
+            <Setter Property="Background" Value="{DynamicResource AccentSoft}"/>
+            <Setter Property="Foreground" Value="{DynamicResource Accent}"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="Icon" TargetType="Button" BasedOn="{StaticResource Btn}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource Sub}"/>
+            <Setter Property="Padding" Value="8,2"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="14">
+        <!-- Shadow on its own layer so it doesn't blur the text -->
+        <Border Background="{DynamicResource Bg}" CornerRadius="12">
+            <Border.Effect><DropShadowEffect BlurRadius="22" ShadowDepth="3" Opacity="0.28"/></Border.Effect>
+        </Border>
+        <Border Background="{DynamicResource Bg}" CornerRadius="12" BorderBrush="{DynamicResource Line}" BorderThickness="1" Padding="16,12,16,16">
+            <StackPanel>
+                <DockPanel x:Name="Header" Background="Transparent" Margin="0,0,0,10" Cursor="SizeAll">
+                    <Button DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="✕" Click="Close_Click"
+                            ToolTip="Close (Esc)" AutomationProperties.Name="Close"/>
+                    <Button x:Name="PinBtn" DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="&#xE718;"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Click="Pin_Click"
+                            ToolTip="Keep open while you work in other apps" AutomationProperties.Name="Keep open"/>
+                    <TextBlock Text="●" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBlock x:Name="Status" Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
+                </DockPanel>
+
+                <Border Background="{DynamicResource Card}" CornerRadius="8" Padding="4">
+                    <TextBox x:Name="Input" Background="Transparent" Foreground="{DynamicResource Fg}"
+                             CaretBrush="{DynamicResource Fg}" SelectionBrush="{DynamicResource Accent}"
+                             BorderThickness="0" Padding="6" FontSize="14"
+                             TextWrapping="Wrap" AcceptsReturn="True" VerticalScrollBarVisibility="Auto"
+                             MinHeight="90" MaxHeight="220" SpellCheck.IsEnabled="False"
+                             AutomationProperties.Name="Text to check"/>
+                </Border>
+
+                <Border x:Name="TranslationRow" Background="{DynamicResource Card}" CornerRadius="8"
+                        Padding="10,4,4,8" Margin="0,8,0,0" Visibility="Collapsed">
+                    <StackPanel>
+                        <DockPanel>
+                            <Button x:Name="UseTranslationBtn" DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="Use ↑"
+                                    Click="UseTranslation_Click" ToolTip="Replace the text above with this translation"/>
+                            <TextBlock x:Name="TranslationLabel" FontSize="11" Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
+                        </DockPanel>
+                        <TextBox x:Name="Translation" IsReadOnly="True" Background="Transparent" BorderThickness="0"
+                                 Foreground="{DynamicResource Fg}" SelectionBrush="{DynamicResource Accent}" FontSize="14"
+                                 TextWrapping="Wrap" MaxHeight="160" VerticalScrollBarVisibility="Auto" Padding="0,2,6,0"
+                                 AutomationProperties.Name="Translation"/>
+                    </StackPanel>
+                </Border>
+
+                <ScrollViewer MaxHeight="240" VerticalScrollBarVisibility="Auto" Margin="0,4,0,0">
+                    <StackPanel x:Name="IssueList"/>
+                </ScrollViewer>
+
+                <DockPanel Margin="0,14,0,0" LastChildFill="False">
+                    <TextBlock x:Name="Hint" DockPanel.Dock="Left" Text="Ctrl+Enter replace · Esc close" FontSize="11"
+                               Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
+                    <Button x:Name="ReplaceBtn" DockPanel.Dock="Right" Style="{StaticResource Primary}" Content="Replace" Click="Replace_Click"/>
+                    <Button x:Name="FixAllBtn" DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="Fix all" Click="FixAll_Click"/>                </DockPanel>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
