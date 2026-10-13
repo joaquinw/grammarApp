@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Interop;
@@ -64,6 +65,7 @@ public partial class MainWindow : Window
         var text = capture ? await Native.CaptureAsync() : "";
 
         Input.Text = text;
+        HistoryPanel.Visibility = Visibility.Collapsed;
         ReplaceBtn.Content = _target == IntPtr.Zero ? "Copy" : "Replace";
         if (_pinned) { Show(); Activate(); } // WPF keeps Left/Top while hidden, so it reopens where the user left it
         else ShowNearCursor();
@@ -286,9 +288,64 @@ public partial class MainWindow : Window
     async void Replace_Click(object sender, RoutedEventArgs e)
     {
         var text = Input.Text;
+        History.Add(text);
         if (!_pinned) Hide();
         if (_target == IntPtr.Zero) Native.Try(() => Clipboard.SetText(text));
         else await Native.PasteAsync(_target, text);
+    }
+
+    void History_Click(object sender, RoutedEventArgs e)
+    {
+        bool show = HistoryPanel.Visibility != Visibility.Visible;
+        HistoryPanel.Visibility = show ? Visibility.Visible : Visibility.Collapsed;
+        HistoryBtn.Foreground = (Brush)FindResource(show ? "Accent" : "Sub");
+        if (show) RenderHistory();
+    }
+
+    void RenderHistory()
+    {
+        HistoryList.Children.Clear();
+        ClearHistoryBtn.IsEnabled = History.Items.Count > 0;
+        if (History.Items.Count == 0)
+        {
+            HistoryList.Children.Add(new TextBlock { Text = "Nothing yet. Texts you Replace or Copy show up here.",
+                                                     Foreground = (Brush)FindResource("Sub"), Margin = new Thickness(0, 4, 0, 4) });
+            return;
+        }
+        foreach (var entry in History.Items)
+        {
+            var b = new Button
+            {
+                Style = (Style)FindResource("Btn"),
+                HorizontalContentAlignment = HorizontalAlignment.Left,
+                Margin = new Thickness(0, 0, 0, 6),
+                Padding = new Thickness(12, 6, 12, 6),
+                ToolTip = entry.Text,
+                Content = new StackPanel
+                {
+                    Children =
+                    {
+                        new TextBlock { Text = entry.When.ToString("g"), FontSize = 11, Foreground = (Brush)FindResource("Sub") },
+                        new TextBlock { Text = entry.Text, TextWrapping = TextWrapping.Wrap, MaxHeight = 54, TextTrimming = TextTrimming.CharacterEllipsis },
+                    },
+                },
+            };
+            AutomationProperties.SetName(b, entry.Text);
+            b.Click += async (_, _) =>
+            {
+                History_Click(this, new RoutedEventArgs());
+                Replace(entry.Text);
+                Input.Focus();
+                await CheckNowAsync();
+            };
+            HistoryList.Children.Add(b);
+        }
+    }
+
+    void ClearHistory_Click(object sender, RoutedEventArgs e)
+    {
+        History.Clear();
+        RenderHistory();
     }
 
     void Close_Click(object sender, RoutedEventArgs e) => Hide();
@@ -297,6 +354,7 @@ public partial class MainWindow : Window
     {
         if (e.Key == Key.Escape) { Hide(); e.Handled = true; }
         else if (e.Key == Key.Enter && Keyboard.Modifiers == ModifierKeys.Control) { Replace_Click(this, e); e.Handled = true; }
+        else if (e.Key == Key.H && Keyboard.Modifiers == ModifierKeys.Control) { History_Click(this, e); e.Handled = true; }
     }
 
     void ApplyTheme()

@@ -4,6 +4,7 @@ Portable, **fully offline** grammar checker + EN⇄ES translator for any text bo
 
 **Use:** select text (or just click inside a field) → `Ctrl+Shift+Space` → click a suggestion (**Why?** explains the grammar rule and how it improves the text) or **Fix all** (the live translation shows in the second row; **Use ↑** swaps it in) → `Ctrl+Enter` pastes the result back. `Esc` closes, `Ctrl+Z` undoes.
 Left-click the tray icon to type or paste text directly; then the main button copies the result to the clipboard.
+**History** (clock icon or `Ctrl+H`): the last 30 texts you sent with Replace/Copy; click one to load it back. Stored only on this PC in `%LOCALAPPDATA%\GrammarApp\history.json`; **Clear** deletes them.
 
 **Build** (needs the .NET 8 SDK and internet *once* to fetch the 2.5 GB model):
 

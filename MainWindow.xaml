@@ -19,7 +19,7 @@
                     <ControlTemplate TargetType="Button">
                         <Border x:Name="b" Background="{TemplateBinding Background}" CornerRadius="7"
                                 Padding="{TemplateBinding Padding}" BorderThickness="1" BorderBrush="Transparent">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True"><Setter TargetName="b" Property="Opacity" Value="0.85"/></Trigger>
@@ -63,9 +63,23 @@
                     <Button x:Name="PinBtn" DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="&#xE718;"
                             FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Click="Pin_Click"
                             ToolTip="Keep open while you work in other apps" AutomationProperties.Name="Keep open"/>
+                    <Button x:Name="HistoryBtn" DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="&#xE81C;"
+                            FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets" Click="History_Click"
+                            ToolTip="Previous texts you sent (Ctrl+H)" AutomationProperties.Name="History"/>
                     <TextBlock Text="●" Foreground="{DynamicResource Accent}" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBlock x:Name="Status" Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
                 </DockPanel>
+
+                <StackPanel x:Name="HistoryPanel" Visibility="Collapsed" Margin="0,0,0,10">
+                    <DockPanel Margin="0,0,0,4">
+                        <Button x:Name="ClearHistoryBtn" DockPanel.Dock="Right" Style="{StaticResource Icon}" Content="Clear"
+                                Click="ClearHistory_Click" ToolTip="Delete all saved texts"/>
+                        <TextBlock Text="PREVIOUS TEXTS · click one to load it" FontSize="11" Foreground="{DynamicResource Sub}" VerticalAlignment="Center"/>
+                    </DockPanel>
+                    <ScrollViewer MaxHeight="260" VerticalScrollBarVisibility="Auto">
+                        <StackPanel x:Name="HistoryList"/>
+                    </ScrollViewer>
+                </StackPanel>
 
                 <Border Background="{DynamicResource Card}" CornerRadius="8" Padding="4">
                     <TextBox x:Name="Input" Background="Transparent" Foreground="{DynamicResource Fg}"

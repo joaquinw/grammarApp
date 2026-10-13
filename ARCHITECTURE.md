@@ -64,7 +64,8 @@ All of this runs in one process. There is no server, no network call and no back
 |---|---|---|
 | `App.cs` | ~80 | Entry point, single-instance guard, tray icon and menu, "Start with Windows", generated tray icon |
 | `MainWindow.xaml` | ~110 | Layout and styles (buttons, chips, cards, translation row) |
-| `MainWindow.xaml.cs` | ~265 | Hotkey handling, summon/capture/replace flow, debounced checking, rendering suggestions, translation row, pin, positioning, theme |
+| `MainWindow.xaml.cs` | ~265 | Hotkey handling, summon/capture/replace flow, debounced checking, rendering suggestions, translation row, pin, history panel, positioning, theme |
+| `History.cs` | ~55 | Last 30 texts sent with Replace/Copy (newest first, no duplicates), saved as JSON in `%LOCALAPPDATA%\GrammarApp\history.json` |
 | `Native.cs` | ~110 | Win32 interop: `RegisterHotKey`, simulated Ctrl+C/A/V, clipboard snapshot/restore, retries |
 | `Checker.cs` | ~185 | The language engine: model loading, prompts, inference, language detection, diff → suggestions, quality guards, self-test |
 | `tests/GrammarApp.Tests/` | — | xUnit unit and integration tests (see §9) |
