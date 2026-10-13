@@ -13,6 +13,7 @@ This document explains what the app does, how each part works, and why it was bu
 | Select text in any app → **Ctrl+Shift+Space** | A small window opens next to the mouse with that text, the grammar suggestions and a live translation |
 | No selection → **Ctrl+Shift+Space** | The whole text field is taken (the app sends Ctrl+A first) |
 | Click a suggestion chip | Only that fix is applied, then the text is checked again |
+| **Why?** on a suggestion | Explains, in the text's language, the grammar rule behind the fix and how it improves the text (first click ~5–8 s, then it toggles) |
 | **Fix all** | Applies the model's full corrected version |
 | **Use ↑** (translation row) | Replaces the text with its translation |
 | **Ctrl+Enter / Replace** | Pastes the result back into the original app, over the selection |
@@ -247,7 +248,7 @@ flowchart TB
 - **llama.cpp** is a C/C++ inference engine for transformer models that runs efficiently on ordinary hardware (SIMD matrix kernels, quantized arithmetic, GPU backends).
 - **LLamaSharp** is the .NET binding. The `LLamaSharp.Backend.Cpu` package includes several builds of the native library (`runtimes/win-x64/native/{avx512,avx2,avx,noavx}`). At startup LLamaSharp checks which instruction sets the CPU supports and loads the fastest build that works.
 - **GPU acceleration via Vulkan.** `LLamaSharp.Backend.Vulkan` adds a llama.cpp build (`runtimes/win-x64/native/vulkan`, +63 MB) that runs the model on any GPU with a Vulkan driver. Every current NVIDIA, AMD and Intel display driver includes one, so **no CUDA toolkit or extra install** is needed. That keeps the app portable, and the same folder uses an NVIDIA card, an AMD Radeon or an Intel Iris/Arc iGPU. When the Vulkan build can't be used (no Vulkan driver, for example on a VM), LLamaSharp falls back to the CPU builds automatically.
-- This is also why the app is published as a **folder, not a single .exe**: the native DLLs must sit on disk in that `runtimes` layout.
+- The native DLLs must sit on disk in that `runtimes` layout, so the single-file exe uses `IncludeAllContentForSelfExtract`: on first run it extracts everything (~350 MB) to `%TEMP%\.net\GrammarApp\<hash>\` and loads from there. Later runs reuse that copy.
 
 #### Loading (`Load`)
 
@@ -361,6 +362,20 @@ Each chip replaces `Offset..Offset+Length` in the current text and then rechecks
 
 **Fix all** applies the model's full corrected text directly. The unit tests check that applying every diff issue gives exactly the same text: `ApplyAll(a, Diff(a, b)) == b`.
 
+### 4.6.1 Explanations (`ExplainAsync`)
+
+The **Why?** button on a suggestion card makes one more model call with the whole text and that single change (`"He go" → "He goes"`). The prompt asks for exactly two lines in the text's language, a **Rule** line and a **Benefit** line. One example, in English or in Spanish to match the text, fixes the format. The UI bolds each label.
+
+Explanations are on demand, not part of the check: generating one per suggestion would triple the time of every check. The answer is kept in the card, so later clicks just show or hide it. A new check cancels a pending explanation, because it rebuilds the cards.
+
+Sample output:
+
+> **Rule:** The third-person singular present tense of "go" is "goes."
+> **Benefit:** The sentence follows correct grammar, making it natural and clear for the reader to understand.
+
+> **Regla:** "sé" debe tener tilde porque es forma conjugada del verbo saber; "qué" lleva tilde como interrogativo.
+> **Beneficio:** La corrección clarifica el sentido y hace que el texto suene más natural y correcto, mejorando la comprensión del lector.
+
 ### 4.7 Measured performance
 
 Dev PC: Intel Xeon E-2244G (4 cores, AVX2, 2019, **no NPU**) + NVIDIA Quadro P600 (Pascal, 4 GB, driver 580).
@@ -427,8 +442,9 @@ dotnet publish -c Release -o publish
 
 - **Target:** `net8.0-windows`, `win-x64`, **self-contained**. The .NET runtime is included, so the target PC needs nothing installed.
 - **Model download at build time:** the MSBuild target `FetchModel` (`BeforeTargets="BeforeBuild"`) uses the built-in `DownloadFile` task to fetch the GGUF into `models\model.gguf`, but only if it's missing. It's then copied next to the exe as `model.gguf`. The `models/` folder is git-ignored. **The built app never accesses the network.**
-- **Output:** a `publish\` folder of ~2.6 GB: the app, the .NET runtime, the native llama.cpp builds (CPU variants + Vulkan) and the model. Copy the folder anywhere (a USB drive, another PC) and run `GrammarApp.exe`.
-- **Not single-file:** see §4.3. llama.cpp's native libraries must be real files in the `runtimes\win-x64\native\<cpu>\` layout.
+- **Output:** two files in `publish\`: `GrammarApp.exe` (~115 MB, compressed single-file: the app, the .NET runtime and the native llama.cpp builds for the CPU variants + Vulkan) and `model.gguf` (2.5 GB). Copy both anywhere (a USB drive, another PC) and run `GrammarApp.exe`.
+- **Self-extracting single-file:** see §4.3. llama.cpp's native libraries must be real files in the `runtimes\win-x64\native\<cpu>\` layout.
+- **Model not bundled** (`ExcludeFromSingleFile`): bundling it would put a second 2.5 GB copy in `%TEMP%` and hits the bundler's 2 GB limit. `Checker.ModelPath` looks next to the real exe (`Environment.ProcessPath`) first, then `AppContext.BaseDirectory` for dev runs and tests.
 
 ---
 
@@ -462,7 +478,7 @@ The tests live in `tests/GrammarApp.Tests` (**xUnit v3**). Both projects are in 
 
 ```
 dotnet test GrammarApp.sln --filter "Category!=Integration"   # unit tests: 49 tests, < 1 s, no model needed
-dotnet test GrammarApp.sln --filter "Category=Integration"    # real model: 7 tests, ~45 s on the GPU
+dotnet test GrammarApp.sln --filter "Category=Integration"    # real model: 9 tests, ~60 s on the GPU
 dotnet test GrammarApp.sln                                    # everything
 ```
 
@@ -497,7 +513,8 @@ These run the real model through `Checker.CheckAsync` / `TranslateAsync`. They'r
 - correct text left alone;
 - "translate this to French" is never applied as French;
 - translation both ways;
-- "write me a poem" is translated, not obeyed.
+- "write me a poem" is translated, not obeyed;
+- **Why?** gives a `Rule:` line and a `Benefit:` line in English and in Spanish.
 
 These are regression tests for the model and the prompts: run them whenever either one changes.
 

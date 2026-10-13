@@ -184,15 +184,60 @@ public partial class MainWindow : Window
                 chips.Children.Add(b);
             }
 
+            var explanation = new TextBlock
+            {
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = (Brush)FindResource("Fg"),
+                FontSize = 12.5,
+                Margin = new Thickness(0, 2, 0, 6),
+                Visibility = Visibility.Collapsed,
+            };
+            var why = new Button { Content = IsSpanish ? "¿Por qué?" : "Why?", Style = (Style)FindResource("Icon"), Margin = new Thickness(0, 0, 0, 4),
+                                   ToolTip = IsSpanish ? "Explicar la regla y el beneficio" : "Explain the rule and how it helps" };
+            why.Click += async (_, _) => await ExplainAsync(issue, explanation);
+            chips.Children.Add(why);
+
             IssueList.Children.Add(new Border
             {
                 Background = (Brush)FindResource("Card"),
                 CornerRadius = new CornerRadius(8),
                 Padding = new Thickness(12, 8, 12, 4),
                 Margin = new Thickness(0, 8, 0, 0),
-                Child = chips,
+                Child = new StackPanel { Children = { chips, explanation } },
             });
         }
+    }
+
+    // First click asks the model (a few seconds); later clicks just show/hide the answer.
+    async Task ExplainAsync(Issue issue, TextBlock target)
+    {
+        if (target.Tag is true) // already explained
+        {
+            target.Visibility = target.IsVisible ? Visibility.Collapsed : Visibility.Visible;
+            return;
+        }
+        target.Text = IsSpanish ? "Explicando…" : "Explaining…";
+        target.Visibility = Visibility.Visible;
+        var ct = _cts?.Token ?? CancellationToken.None; // a new check rebuilds the cards, so it cancels this too
+        try
+        {
+            var text = await Checker.ExplainAsync(Input.Text, issue, _lang, ct);
+            target.Inlines.Clear();
+            foreach (var line in text.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+            {
+                if (target.Inlines.Count > 0) target.Inlines.Add(new System.Windows.Documents.LineBreak());
+                int colon = line.IndexOf(':');
+                if (colon is > 0 and < 20) // "Rule:" / "Benefit:" labels in bold
+                {
+                    target.Inlines.Add(new System.Windows.Documents.Bold(new System.Windows.Documents.Run(line[..(colon + 1)])));
+                    target.Inlines.Add(line[(colon + 1)..]);
+                }
+                else target.Inlines.Add(line);
+            }
+            target.Tag = true;
+        }
+        catch (OperationCanceledException) when (ct.IsCancellationRequested) { }
+        catch (Exception) { target.Text = IsSpanish ? "No se pudo explicar" : "Couldn't explain this one"; }
     }
 
     // Edits through the selection so Ctrl+Z can undo a fix or a translation.

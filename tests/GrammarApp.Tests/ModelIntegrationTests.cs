@@ -65,6 +65,22 @@ public class ModelIntegrationTests
         Assert.True(r.Unsure || r.Corrected.Contains("meeting"));
     }
 
+    [Theory]
+    [InlineData("en", "He go to school every day.", "He go", "He goes", "Rule:", "Benefit:")]
+    [InlineData("es", "No se que hacer.", "se que", "sé qué", "Regla:", "Beneficio:")]
+    public async Task Explains_the_rule_and_the_benefit_in_the_text_language(string lang, string text, string bad, string good, string rule, string benefit)
+    {
+        RequireModel();
+        var issue = new Issue("", text.IndexOf(bad), bad.Length, new[] { good }, bad);
+        var why = await Checker.ExplainAsync(text, issue, lang, Ct);
+        TestContext.Current.TestOutputHelper?.WriteLine(why);
+
+        var lines = why.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+        Assert.Equal(2, lines.Length);
+        Assert.StartsWith(rule, lines[0]);
+        Assert.StartsWith(benefit, lines[1]);
+    }
+
     [Fact]
     public async Task Translates_both_ways()
     {

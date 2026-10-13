@@ -11,10 +11,15 @@
     <!-- Tests live in their own project under tests/; keep them out of the app. -->
     <DefaultItemExcludes>$(DefaultItemExcludes);tests\**</DefaultItemExcludes>
 
-    <!-- Portable: `dotnet publish -c Release -o publish` => a folder that runs anywhere, offline, no installs.
-         Not single-file: llama.cpp's native DLLs must sit on disk next to the exe. -->
+    <!-- Portable: `dotnet publish -c Release -o publish` => GrammarApp.exe + model.gguf, runs anywhere, offline, no installs.
+         llama.cpp's native DLLs must be real files in their runtimes\ layout, so the exe self-extracts everything
+         (once, to %TEMP%\.net\GrammarApp) instead of loading from memory. -->
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <DebugType>embedded</DebugType>
 
     <ModelUrl>https://huggingface.co/unsloth/Qwen3-4B-Instruct-2507-GGUF/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_M.gguf</ModelUrl>
   </PropertyGroup>
@@ -36,7 +41,8 @@
   </Target>
 
   <ItemGroup>
-    <None Include="models\model.gguf" Link="model.gguf" CopyToOutputDirectory="PreserveNewest" />
+    <!-- ponytail: model stays next to the exe, not in it: bundling 2.5 GB would re-extract it to %TEMP% and hits the bundler's 2 GB limit -->
+    <None Include="models\model.gguf" Link="model.gguf" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
   </ItemGroup>
 
 </Project>
